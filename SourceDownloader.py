@@ -1,5 +1,5 @@
 import time
-import requests
+import urllib2
 import traceback
 from rdflib import Graph
 import threading
@@ -86,14 +86,12 @@ def setVal(sCases,st,ot,gt):
 
         return sCases
 
-def evaluateRDF(fileurl,allstats,statusFile):
-	headers={'Content-type': 'text/turtle,application/rdf+xml,text/ntriples,application/ld+json'}
-	r = requests.get(fileurl,headers=headers,timeout=1)
-	code = r.status_code
+def evaluateRDF(fileurl,allstats):
         try:
-                content = r.text
-                contentType =r.headers.get('Content-Type')
-		print contentType
+                req = urllib2.Request(fileurl, headers={'Content-type': 'text/turtle,application/rdf+xml,text/ntriples,application/ld+json'})
+                response = urllib2.urlopen(req,timeout=4)
+                content = response.read()
+                contentType = response.info().getheader('Content-Type')
                 if "xml" in contentType:
                         contentType = "xml"
                 elif "turtle" in contentType:
@@ -102,23 +100,22 @@ def evaluateRDF(fileurl,allstats,statusFile):
                         contentType = "n3"
                 elif "nt" in contentType:
                         contentType = "nt"
-		else:
-			contentType = "xml"
+                else:
+                        contentType = "xml"
                 g = Graph()
                 g.parse(data=content,format=contentType)
-		print "finished loading"
                 stats = getST(g,fileurl)
                 allstats = setVal(allstats,stats[0],stats[1],stats[2])
 		
-		statusFile.write("success:"+fileurl+","+str(code)+","+r.headers.get('Content-Type'))
+		statusFile.write("success:"+fileurl+","+response.getcode(),","+response.info().getheader('Content-Type'))
 		
 		#print stats
 		#print allstats
 		return allstats
 
-        except:
+        except e:
 		traceback.print_exc()
-		statusFile.write("error:"+fileurl+","+str(code)+","+r.headers.get('Content-Type'))
+		statusFile.write("error:"+fileurl)
                 return "error:" + " "+fileurl
 
 
@@ -129,12 +126,11 @@ class Source:
 		self.sfile = sfile
 		self.f = open(sfile,"r")
 		self.allStats = allStats
-		self.statusFile = statusFile	
+	
 	
 	def evaluate(self):
 		for url in self.f:
-			print url
-			stats = evaluateRDF(url,self.allStats,self.statusFile) 
+			stats = evaluateRDF(url,self.allStats,statusFile) 
 			time.sleep(2)
 			#print url + str(stats)
 #allstats = {
