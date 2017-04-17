@@ -1,3 +1,4 @@
+from threading import Thread
 from SourceDownloader import Source
 import urllib2
 from rdflib import Graph
@@ -27,7 +28,10 @@ for line in f:
 	numSources = lineParts[2]
 	sourceFilename = directory + code
 	
-	s = Source(sourceName,code,numSources,sourceFilename,allstats)
-	s.evaluate() 
+	statusFileName = directory+"downloadStatus"
+	statusFile = open(statusFileName,"w")
+	s = Source(sourceName,code,numSources,sourceFilename,allstats,statusFile)
+	Thread(s.evaluate()).start()
+	statusFile.close()
 
 print allstats
