@@ -11,6 +11,7 @@ caseSTGT = threading.Lock()
 caseOTGT = threading.Lock()
 caseSTOTGT = threading.Lock()
 caseEmpty = threading.Lock()
+statusWriteLock = threading.Lock()
 
 def getST(g,rlink):
 	st = 0
@@ -86,9 +87,10 @@ def setVal(sCases,st,ot,gt):
 
         return sCases
 
-def evaluateRDF(fileurl,allstats):
+def evaluateRDF(fileurl,allstats,statusFile):
+	fileurl = fileurl.replace("\n","")
         try:
-                req = urllib2.Request(fileurl, headers={'Content-type': 'text/turtle,application/rdf+xml,text/ntriples,application/ld+json'})
+                req = urllib2.Request(fileurl, headers={'Accept': 'text/turtle;q=0.9,application/rdf+xml;q=1,text/ntriples;q=0.8,application/ld+json'})
                 response = urllib2.urlopen(req,timeout=4)
                 content = response.read()
                 contentType = response.info().getheader('Content-Type')
@@ -107,15 +109,16 @@ def evaluateRDF(fileurl,allstats):
                 stats = getST(g,fileurl)
                 allstats = setVal(allstats,stats[0],stats[1],stats[2])
 		
-		statusFile.write("success:"+fileurl+","+response.getcode(),","+response.info().getheader('Content-Type'))
+		with statusWriteLock:
+			statusFile.write("success,"+fileurl+","+str(response.getcode())+","+response.info().getheader('Content-Type')+"\n")
 		
 		#print stats
 		#print allstats
 		return allstats
 
-        except e:
-		traceback.print_exc()
-		statusFile.write("error:"+fileurl)
+        except Exception as exception:
+		with statusWriteLock:
+			statusFile.write("error,"+str(exception.__class__.__name__)+","+fileurl.replace(",","")+"\n")
                 return "error:" + " "+fileurl
 
 
@@ -126,11 +129,12 @@ class Source:
 		self.sfile = sfile
 		self.f = open(sfile,"r")
 		self.allStats = allStats
+		self.statusFile = statusFile
 	
 	
 	def evaluate(self):
 		for url in self.f:
-			stats = evaluateRDF(url,self.allStats,statusFile) 
+			stats = evaluateRDF(url,self.allStats,self.statusFile) 
 			time.sleep(2)
 			#print url + str(stats)
 #allstats = {

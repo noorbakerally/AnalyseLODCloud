@@ -19,19 +19,25 @@ allstats = {
 
 directory = "/home/bakerally/Documents/repositories/emse_gitlab/LODRDFAnalysis/test/"
 f = open(directory+"repstat","r")
+statusFileName = directory+"downloadStatus"
+statusFile = open(statusFileName,"a")
+workers = []
 for line in f:
 	if ">" in line:
 		continue
+	print line
 	lineParts = line.split(",")
 	sourceName = lineParts[0]
 	code = lineParts[1]
 	numSources = lineParts[2]
 	sourceFilename = directory + code
 	
-	statusFileName = directory+"downloadStatus"
-	statusFile = open(statusFileName,"w")
 	s = Source(sourceName,code,numSources,sourceFilename,allstats,statusFile)
-	Thread(s.evaluate()).start()
-	statusFile.close()
-
-print allstats
+	t = Thread(target=s.evaluate)
+	workers.append(t)
+	#statusFile.close()
+for t in workers:
+	t.start()
+for t in workers:
+	t.join()
+#print allstats
