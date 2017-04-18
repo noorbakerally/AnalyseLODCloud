@@ -1,10 +1,11 @@
-from rdflib import Graph
+from rdflib import ConjunctiveGraph
 import json
 import pickle
 from urlparse import urlparse
 import validators
 from datetime import datetime
 import sys
+import urllib2
 
 numResources = 0
 dindex = {}
@@ -72,7 +73,7 @@ def addURL(rURL,role):
 	global durls
 	URLKey,namespace,sep,sepType = getURLKey(rURL)
 	if URLKey not in durls.keys():
-		durls[URLKey] = {"subject":0,"object":0,"sep":sep,"sepType":sepType,"sampleURL":rURL}
+		durls[URLKey] = {"subject":0,"object":0,"predicate":0,"sep":sep,"sepType":sepType,"sampleURL":rURL}
 	durls[URLKey][role] =  durls[URLKey][role] + 1	
 	
 
@@ -91,24 +92,26 @@ def addResource(rURL,role):
 		numResources = numResources + 1
 
 def iterTriples():
-	f = open(sys.argv[1],"r")
+	f = urllib2.urlopen("http://ci.emse.fr/dump/xaa")
+	#f = urllib2.urlopen("file:///home/bakerally/Documents/repositories/emse_gitlab/LODRDFAnalysis/test.nq")
+	g = ConjunctiveGraph()
+
 	tp = 1
 	for line in f:
-		t = line.split(" ")	
-		s = t[0]
-		s = s[1:len(s)-1]
-		o = t[2]
-		o = o[1:len(o)-1]
-		if (validators.url(s)):
-			addResource(s,"subject")
-		if (validators.url(o)):
-			addResource(o,"object")
-		#print "Triples Processed:"+str(tp)
-		#print "Resources Added:"+str(numResources)
-		counter = open("counter","w")
-		counter.write(str(tp)+"\n")
-		counter.close()
-		tp = tp + 1
+		g.parse(data = line, format = "nquads")
+		for s,p,o in g:
+			if (validators.url(s)):
+				addResource(s,"subject")
+			if (validators.url(o)):
+				addResource(o,"object")
+			print p
+			addURL(p,"predicate")
+			print "Triples Processed:"+str(tp)
+			print "Resources Added:"+str(numResources)
+			counter = open("counter","w")
+			counter.write(str(tp)+"\n")
+			counter.close()
+			tp = tp + 1
 iterTriples()
 writeToFile()
 
