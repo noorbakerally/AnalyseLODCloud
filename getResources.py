@@ -78,6 +78,7 @@ def addURL(rURL,role):
 
 def addResource(rURL,role):
 	global numResources
+
 	urlParts = urlparse(rURL)
 	host = urlParts.netloc
 	addURL(rURL,role)
@@ -103,8 +104,11 @@ def iterTriples():
 		if (validators.url(o)):
 			addResource(o,"object")
 		print
-		print "Triples Processed:"+str(tp)
-		print "Resources Added:"+str(numResources)
+		#print "Triples Processed:"+str(tp)
+		#print "Resources Added:"+str(numResources)
+		counter = open("counter","w")
+		counter.write(str(tp)+"\n")
+		counter.close()
 		tp = tp + 1
 iterTriples()
 writeToFile()
