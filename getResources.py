@@ -92,7 +92,6 @@ def addResource(rURL,role):
 
 def iterTriples():
 	f = open(sys.argv[1],"r")
-	err = open("notAdded","w")
 	tp = 1
 	for line in f:
 		t = line.split(" ")	
@@ -102,13 +101,8 @@ def iterTriples():
 		o = o[1:len(o)-1]
 		if (validators.url(s)):
 			addResource(s,"subject")
-		else:
-			err.write(s+"\n")
 		if (validators.url(o)):
 			addResource(o,"object")
-		else:
-			err.write(o+"\n")
-		print
 		#print "Triples Processed:"+str(tp)
 		#print "Resources Added:"+str(numResources)
 		counter = open("counter","w")
