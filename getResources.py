@@ -1,4 +1,4 @@
-from rdflib import Graph
+from rdflib import Graph,ConjunctiveGraph
 import json
 import pickle
 import validators
@@ -114,21 +114,18 @@ def addResource(rURL,role):
 def processTriple(line):
 	global triplesProcessed
 	global inputFilename
-	t = line.split(" ")	
-	s = t[0]
-	s = s[1:len(s)-1]
-	p = t[1]
-	p = p[1:len(p)-1]
-	o = t[2]
-	o = o[1:len(o)-1]
-	if (validators.url(s)):
-		addResource(s,"subject")
-	if (validators.url(o)):
-		addResource(o,"object")
-	addURL(p,"predicate")
-	g = t[3]
-	g = g[1:len(g)-1]
-	addGURL(g)
+
+	g = ConjunctiveGraph()
+	g.parse(data=line,format="nquads")
+	for s,p,o in g:
+		if (validators.url(s)):
+			addResource(s,"subject")
+		if (validators.url(o)):
+			addResource(o,"object")
+		addURL(p,"predicate")
+	
+	for s in g.contexts():
+		addGURL(s._Graph__identifier)
 	triplesProcessed = triplesProcessed + 1
 	counter = open(inputFilename+"counter","w")
 	counter.write(inputFilename+" "+str(triplesProcessed)+"\n")
