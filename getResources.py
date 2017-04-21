@@ -7,6 +7,9 @@ import sys
 import urllib2
 import threading
 from urlparse import urlparse
+import traceback
+
+logFile = open("log","w")
 
 numResources = 0
 
@@ -18,6 +21,15 @@ gurls = {}
 triplesProcessed = 0
 inputFilename = ""
 workers = []
+
+def writeError(err,traceback):
+	global logFile
+	lg = "Error: Triple:"+str(triplesProcessed)+"\n"
+	lg = lg + traceback.format_exc()
+	lg = lg + "\n"
+        logFile.write(lg)
+
+
 def writeToFile():
 	global dindex
 	indexCounter = 1
@@ -47,41 +59,66 @@ def getDataType(word):
 def getURLKey(rURL):
 	sep = "/"
 	sepType = "NULL"
-	urlParts = urlparse(rURL)
+
+	try:
+		urlParts = urlparse(rURL)
+	except Exception as err:
+		writeError(err,traceback)
+		return None
+		
 	namespace = urlParts.scheme+"://"+urlParts.netloc+urlParts.path
 	onamespace = urlParts.scheme+"://"+urlParts.netloc
-	
-	if (len(urlParts.query) == 0 and len(urlParts.fragment) == 0):
-		slindex = urlParts.path.rfind("/")
-		sl = urlParts.path[slindex:]
-		if len(sl.replace(" ", "")) != 0:
-			sepType = getDataType(sl)
-			namespace = namespace[:namespace.rfind("/")] + "/" + getDataType(sl)
-			onamespace = namespace[:namespace.rfind("/")] + "/"
-	else:
-		onamespace = onamespace + urlParts.path
-        
-	if len(urlParts.query) > 0:
-                query = urlParts.query
-                qparts = sorted(query.split("&"))
-                namespace = namespace + "?"
-                for qp in qparts:
-                        if "=" in qp:
-                                qps = qp.split("=")     
-                                qp1 = qps[0]
-                                qp2 = getDataType(qps[1])
-                                namespace = namespace + qp1+"="+qp2 + "&"
-                        else:
-                                namespace = namespace + qp + "&"
 
-        if len(urlParts.fragment) > 0:
-                namespace = namespace + "#" + getDataType(urlParts.fragment)
-		sep = "#"	
+	try:
+		if (len(urlParts.query) == 0 and len(urlParts.fragment) == 0):
+			slindex = urlParts.path.rfind("/")
+			sl = urlParts.path[slindex:]
+			if len(sl.replace(" ", "")) != 0:
+				sepType = getDataType(sl)
+				namespace = namespace[:namespace.rfind("/")] + "/" + getDataType(sl)
+				onamespace = namespace[:namespace.rfind("/")] + "/"
+		else:
+			onamespace = onamespace + urlParts.path
+      	except Exception as err:
+                writeError(err,traceback)
+                return None
+
+	 
+	try:
+		if len(urlParts.query) > 0:
+			query = urlParts.query
+			qparts = sorted(query.split("&"))
+			namespace = namespace + "?"
+			for qp in qparts:
+				if "=" in qp:
+					qps = qp.split("=")     
+					qp1 = qps[0]
+					qp2 = getDataType(qps[1])
+					namespace = namespace + qp1+"="+qp2 + "&"
+				else:
+					namespace = namespace + qp + "&"
+	except Exception as err:
+                writeError(err,traceback)
+                return None
+
+	try:
+		if len(urlParts.fragment) > 0:
+			namespace = namespace + "#" + getDataType(urlParts.fragment)
+			sep = "#"	
+	except Exception as err:
+                writeError(err,traceback)
+                return None
+
 	return [namespace,onamespace,sep,sepType]
 
 def addURL(rURL,role):
 	global durls
-	URLKey,namespace,sep,sepType = getURLKey(rURL)
+	
+	URLKeys = getURLKey(rURL)
+	if URLKeys == None:
+		return
+
+	URLKey,namespace,sep,sepType = URLKeys
 	
 	if URLKey not in durls.keys():
 		durls[URLKey] = {"subject":0,"predicate":0,"object":0,"sep":sep,"sepType":sepType,"sampleURL":rURL}
@@ -100,7 +137,12 @@ def addGURL(rURL):
 def addResource(rURL,role):
 	global numResources
 
-	urlParts = urlparse(rURL)
+	try:
+		urlParts = urlparse(rURL)
+	except Exception as err:
+                writeError(err,traceback)
+                return
+
 	host = urlParts.netloc
 	addURL(rURL,role)
 
@@ -116,16 +158,24 @@ def processTriple(line):
 	global inputFilename
 
 	g = ConjunctiveGraph()
-	g.parse(data=line,format="nquads")
-	for s,p,o in g:
-		if (validators.url(s)):
-			addResource(s,"subject")
-		if (validators.url(o)):
-			addResource(o,"object")
-		addURL(p,"predicate")
-	
-	for s in g.contexts():
-		addGURL(s._Graph__identifier)
+	try:
+		g.parse(data=line,format="nquads")
+		for s,p,o in g:
+			if (validators.url(s)):
+				addResource(s,"subject")
+			if (validators.url(o)):
+				addResource(o,"object")
+			addURL(p,"predicate")
+	except Exception as err:
+		writeError(err,traceback)
+		return 
+	try:
+		for s in g.contexts():
+			addGURL(s._Graph__identifier)
+	except Exception as err:
+		writeError(err,traceback)
+		return
+		
 	triplesProcessed = triplesProcessed + 1
 	counter = open(inputFilename+"counter","w")
 	counter.write(inputFilename+" "+str(triplesProcessed)+"\n")
