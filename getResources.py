@@ -9,7 +9,6 @@ import threading
 from urlparse import urlparse
 import traceback
 
-logFile = open("log","w")
 
 numResources = 0
 
@@ -20,6 +19,7 @@ gurls = {}
 
 triplesProcessed = 0
 inputFilename = ""
+logFile = ""
 workers = []
 
 def writeError(err,traceback):
@@ -185,11 +185,14 @@ def processTriple(line):
 def main():
 	global triplesProcessed
 	global inputFilename
+	global logFile
+
 	inputFilename = sys.argv[1]
 	inputFilename = inputFilename[:inputFilename.rfind("/")+1]
 	f = open(sys.argv[1],"r")
 	directory = inputFilename[:inputFilename.rfind("/")+1] 
 	#f = urllib2.urlopen("http://ci.emse.fr/dump/dmp/dump.nq")
+	logFile = open(directory+"log","w")
 	for line in f:
 		processTriple(line)
 		#if (triplesProcessed > 100):
