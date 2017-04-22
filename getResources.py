@@ -3,11 +3,14 @@ import json
 import pickle
 import validators
 from datetime import datetime
-import sys
 import urllib2
 import threading
 from urlparse import urlparse
 import traceback
+
+import sys
+reload(sys)
+sys.setdefaultencoding('utf8')
 
 
 numResources = 0
